@@ -289,3 +289,53 @@ sum(dbinom(x=y_maj_male, size=Nbr, prob=prob))
 pbinom(4, size=10, prob =0.4)
 pbinom(5, size=10, prob=0.4, lower.tail = FALSE)
 
+#-----------------------------------------------------------------
+#Third session
+
+# Assignment 2.1 question 5
+#hypothesis parameter valus
+lambda_hyp1 <- 1.1
+lambda_hyp2 <- 2.9
+lambda_hyp3 <- 3.5
+
+#data
+y <-2
+
+#likelihood:
+dpois(x=y, lambda = lambda_hyp1)
+dpois(x=y, lambda = lambda_hyp2)
+dpois(x=y, lambda = lambda_hyp3)
+
+#second way of doing this task:
+lambda_hyp <- c(1.1, 2.9, 3.5)
+lambda_tilde <- setNames(nm = lambda_hyp)
+dpois(x=y, lambda = lambda_tilde)
+
+#plot lilelihood functions
+lambda_tilde <- seq(from=0, to=10, by=1e-2)
+l_pois <- dpois(x=y, lambda = lambda_tilde, log = FALSE)
+l_pois_log <- dpois(x=y, lambda = lambda_tilde, log = TRUE)
+plot(x=lambda_tilde, y=l_pois, type='l')
+abline(v=2, col='red')
+plot(x=lambda_tilde, y=l_pois_log, type='l')
+abline(v=2, col='red')
+
+1e-2
+
+#second example
+y<-4
+N<-15
+p_tilde <- seq(from=0, to=1, by=1e-2)
+l_binom <- dbinom(x=y, size = N, prob = p_tilde)
+plot(x=p_tilde, y=l_binom, type='l')
+abline(v=0.27, col='pink')
+abline(v=4/15, col='red')
+#final point
+# taking the log doesn't change the density function????? Ask!
+
+#end
+#_________________________________________________________________________________________
+#Third tutorial  (was canceled)
+#____________________________________________________________________________________________
+#forth session lesson 2.2
+

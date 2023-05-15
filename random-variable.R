@@ -339,3 +339,41 @@ abline(v=4/15, col='red')
 #____________________________________________________________________________________________
 #forth session lesson 2.2
 
+y <- c(3.4,1.2,0.6, 0.9, 2.2, 1.5, 2.3)
+
+# Analytical MLE of mu
+
+mle_ana <- mean(y)
+
+dnorm(y, mean = 2, sd=1, log=FALSE)
+dnorm(y, mean = 2, sd=1, log = TRUE)
+# the log likelihood score
+sum(dnorm(y, mean = 3, sd=1, log = TRUE))
+
+# Graphical MLE of mu
+# we ignore the sigma factor according to THE BOOK! knowing one would not help to know the other!
+ll_norm <- function(mu, y){  #log likelihood of normal distribution
+  sigma <- 1 #King calls it stylized normal distribution
+  ll <- sum(dnorm(y, mean = mu, sd=sigma,  log = TRUE))
+  return(ll)
+}
+
+# lets try it out
+ll_norm(0, y)
+ll_norm(1.3, y)
+ll_norm(2.2, y)
+ll_norm(2.9, y)
+
+mu_tld <- seq(from = -1, to = 6, by =1e-2)
+
+logl <- numeric()
+for ( i in seq_along(mu_tld)){
+  logl[i] <- ll_norm(mu= mu_tld, y)
+}
+
+logl
+data.frame(mu_tld, logl)
+
+plot(mu_tld, logl, type='l')
+abline(v=mle_ana, col='red')
+mle_ana

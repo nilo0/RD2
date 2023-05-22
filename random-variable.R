@@ -379,8 +379,76 @@ for ( i in seq_along(mu_tild)){
 
 logl
 # see as dataframe
-data.frame(mu_tld, logl)
+data.frame(mu_tild, logl)
 
-plot(mu_tld, logl, type="l")
+plot(mu_tild, logl, type="l")
 abline(v=mle_ana, col='red')
 mle_ana
+
+
+#________________________________________________________________________________]
+# 22.05.2023 Fifth session
+
+# normal (maximum) likelihood with fixed sigma
+
+# we have seen that the mean is the best guess for the maximum likelihood
+# numerical MLE
+
+# the key fcuntcion here is the optim() function, this code is written by john nash himself :D
+# we use ll_norm function we defined during the forth week
+theta_start <-0
+# following function will return a warning and the result is wrong! because optim by defult 
+# returns the minumun not the maximum and indeed it minimized the ll_norm! and ll_norm as we know does not have min!
+optim(
+  fn = ll_norm,
+  par=  theta_start, # we have to start from somewhere and need a starting point
+  y = y,
+  )
+
+# the fixed version is:
+norm_reg <- optim( #basically we ran a simple regression
+  fn = ll_norm,
+  par=  theta_start, # we have to start from somewhere and need a starting point
+  y = y,
+  control = list(fnscale=-1), # flips the function around and now we can find the maximum
+  method = "BFGS" #not mandatory parameter, but it will get rid of the warning
+)
+# again we get a warning but we ignore the warning! 
+norm_reg
+
+mle_num <- norm_reg$par
+# to check how similar/different the analytical and numerical mle are:
+mle_num
+mle_ana
+
+
+# computing the standard errors:
+# using the analytic second derivative:
+
+h_ana <- -length(y) #the hessian
+
+#varicance covariance matrix
+vrcov <- - (h_ana)^(-1)
+
+#standard error
+se <- sqrt(vrcov)
+se
+
+# using numerical second derivative
+theta_start <- 0
+norm_reg <- optim(
+  fn=ll_norm,
+  par=theta_start,
+  y=y,
+  control = list(fnscale=-1),
+  method="BFGS",
+  hessian=TRUE
+  )
+h_num <-norm_reg$hessian
+
+vcov <- -(solve(h_num)) # inverse of the matrix
+#taking the square toot of the diagonal
+se <- sqrt(diag(vcov))
+se
+
+#we can use the above code for any model! just change the function that we want to optimize, the loglikelihood function, the rest is exactly the same (the optimization steps)

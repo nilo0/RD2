@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# First lecture
+# First lecture 17.4
 
 ## Random experiment/random variable
 
@@ -58,7 +58,7 @@ mean(-1< y & y < 1)
 
 
 # ------------------------------
-# second lecture
+# second lecture 24.4
 
 ##Random experiment/random variables
 rnorm(n = 1)
@@ -246,7 +246,7 @@ lm(y ~ x)
 
 
 # ----------------------------------------------------------------------------
-# Second tutorial:
+# Second tutorial: 26.4
 
 # missing part
 d_bionomial <- function(y, N, p){
@@ -290,7 +290,7 @@ pbinom(4, size=10, prob =0.4)
 pbinom(5, size=10, prob=0.4, lower.tail = FALSE)
 
 #-----------------------------------------------------------------
-#Third session
+#Third session 8.5
 
 # Assignment 2.1 question 5
 #hypothesis parameter valus
@@ -337,7 +337,7 @@ abline(v=4/15, col='red')
 #_________________________________________________________________________________________
 #Third tutorial  (was canceled)
 #____________________________________________________________________________________________
-#forth session lesson 2.2
+#forth session lesson 2.2 15.5
 # Normal (maximum) likelihood with fixed sigma
 
 y <- c(3.4, 1.2, 0.8, 0.9, 2.2, 1.5, 2.3)
@@ -452,3 +452,94 @@ se <- sqrt(diag(vcov))
 se
 
 #we can use the above code for any model! just change the function that we want to optimize, the loglikelihood function, the rest is exactly the same (the optimization steps)
+
+
+#________________________________________________________________________________
+# fifth Tutorial session, 24.05.2023
+
+# Assignment 2.3: 
+# Exercise 3:
+# we always check the null hypothesis and check if it hold and considering the data, 
+# how strong it is.
+# To do so we start backward to see what we have and what we are missing. To do so use the likelihood ratio test
+# to see if the hypothesis is compatible with the data and how compatible it is 
+# recall that we have log L*/L*_R thus the graph looks like 1/x and depending on where it lies we can reject or accept the hypothesis
+# we fixed the parameter at the fixed value anc check with the support that the data gives if we allow the data causes the value to vary (this is the un-restricted model)
+# we have to figure out 2 quantities, the log likelihood at the maximum? look at the log likelihood function
+
+# the critical value of the chi-square:
+qchisq(0.05, df=1, lower.tail = FALSE) # check this function,
+qchisq(0.95, df=1) # the same value
+# the df, the degree of freedom is set ot 1 as we have one restriction on our parameter
+# in 3.b we have more restriction thus df should be higher???
+
+# ----------------------------------------------------------------------------------------
+#June 11th lecture / sixth session
+
+#see lecture notes for the formula
+# maximum likelihood, normal y with predictor
+# example
+# regression of government approval on unemployment.
+
+path_data <- 'Developement/RD2/approval-kohl.csv'
+#loading the data
+data <- read.csv(path_data)
+# look at the data
+data
+
+yvar <- "approve"
+xvars <- "unemp"
+
+y <- data[, yvar]
+x <- as.matrix(data[, xvars])
+
+theta_start <- c(0, 0, 1)
+
+# log likelihood function for stylized normal 
+ll_norm <- function(mu, y, x=NULL){  #log likelihood of normal distribution, notice here x has been set to null, check why!
+  n_par <- length(theta)
+  beta <- theta(n_par)
+  mu <- cbind(1, x) %*% beta
+  sigma <- 1 #King calls it stylized normal distribution
+  ll <- sum(dnorm(y, mean = mu, sd=sigma,  log = TRUE))
+  return(ll)
+}
+
+# estimation ... 
+norm_reg <- optim( #basically we ran a simple regression
+  fn = ll_norm,
+  par=  theta_start, # we have to start from somewhere and need a starting point
+  y = y,
+  control = list(fnscale=-1), # flips the function around and now we can find the maximum
+  method = "BFGS", #not mandatory parameter, but it will get rid of the warning
+  hessian = TRUE
+)
+
+
+
+#------------------------------------------------------------------------------------
+# tutorial 21.06
+
+n_obs <- 5
+max_obs <- 53
+
+#likelihood function ...
+if_tanks <- function(N_tanks, n_obs, max_obs){
+  ifelse(
+    max_obs <= N_tanks,
+    1/ choose(N_tanks, n_obs),
+    0
+  )
+}
+
+# plotting
+N_tanks_tilde <- seq(from=1, to=max_obs+20)
+l_tanks <- if_tanks(N_tanks_tilde, n_obs, max_obs)
+plot(N_tanks_tilde, l_tanks, type="h")
+
+
+# how to calculate the critical value
+qnorm(0.95)
+qnorm(0.05, lower.tail = FALSE)
+
+

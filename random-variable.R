@@ -543,3 +543,184 @@ qnorm(0.95)
 qnorm(0.05, lower.tail = FALSE)
 
 
+# ------------------------------------------------------------------------------
+#June 26th
+
+## ML estimation of Bernoulli y with predictors
+
+## Bundestag vote on same-sex marriage
+## MPs from CDU/CSU
+
+
+# define data and variables ----
+
+yvar <- "yes"
+xvars <- c(
+  "female",
+  "age",
+  "list_only",
+  "votes_union",
+  "votes_green"
+)
+
+path_data <- "~/Downloads/cdu-marriage.csv"
+
+
+# log-likelihood function for Bernoulli regression ----
+
+ll_bern <- function(theta, y, x = NULL) {
+  
+  beta <- theta
+  
+  if (is.null(x))
+    xb <- beta
+  else 
+    xb <- cbind(1, x) %*% beta
+  
+  p <- 1 / (1 + exp(-xb))
+  
+  ll <- sum(dbinom(y, size = 1, prob = p, log = TRUE))
+  
+  return(ll)
+  
+}
+
+
+# estimation inputs ----
+
+data <- read.csv(path_data)
+
+y <- data[, yvar]
+x <- as.matrix(data[, xvars])
+
+theta_start <- setNames(
+  rep_len(0, ncol(x) + 1),
+  nm = c("const", xvars)
+)
+
+
+# estimation ----
+
+regres <- optim(
+  fn = ll_bern,
+  par = theta_start,
+  y = y,
+  x = x,
+  control = list(fnscale = -1),
+  method = "BFGS",
+  hessian = TRUE
+)
+
+
+# post estimation ----
+
+# standard errors ----
+
+h <- regres$hessian
+vcov <- -(solve(h))
+se <- sqrt(diag(vcov))
+
+
+# Wald test statistics for H_0: k = 0 ----
+
+k <- 0
+
+coefs <- regres$par
+
+w <- (coefs - k) / se
+p_val <- pnorm(abs(w), lower.tail = FALSE) * 2
+
+
+# print result ----
+
+round(
+  data.frame(Coef = coefs, SE = se, z = w, p = p_val),
+  digits = 4
+)
+
+ 
+ 
+ #compute fitted values
+ x <- c(
+   female=0,
+   age=5,
+   list_only=0,
+   voters_union=0.35,
+   voters_green=0.08
+ )
+ 
+ # compute expected value of Y, giben estimates of beta
+ xb <- c(1, x)%*%coefs 
+ pr <- 1 / (1 + exp(-xb))
+ 
+ # note that we need to have c(1, x) for the matrix multiplication, 1 here would be multiplied by the constant coeff of the regression model
+ 
+ 
+ #compute the first difference
+ 
+ # input values
+ x_0 <- c(
+   female=0,
+   age=5,
+   list_only=0,
+   voters_union=0.35,
+   voters_green = 0.08
+ )
+
+ x_1  <- c(
+   female=0,
+   age=4,
+   list_only=0,
+   voters_union=0.35,
+   voters_green = 0.08
+ )
+ 
+ xb_0 <- c(1, x_0)%*%coefs
+ xb_1 <- c(1, x_1)%*%coefs
+
+ pr_0 <- 1 / (1 + exp(-xb_0))
+ pr_1 <- 1 / (1 + exp(-xb_1))
+
+ fd <- pr_1 - pr_0
+ fd
+ # the sign is positive as it should be as the coeff of age is negative thus decreasing the age must lead to positive first difference due to change in age.
+ # now if we change one other variable and calculate the first difference the result is superficially similar but different a bit, but in general (not like this example)
+ # the change could be much higher, in this case as the gender has small effect (considering z, p and smalll fd) change in fd due to change in gender is small 
+ # now if we consider a variable with significant effect on the outcome then the change in fd due to change in this variable is high! 
+ 
+ 
+ 
+ # calculate quantities of interest with uncertainity ...
+ # estimate via parametric bootstrap
+ 
+ n_boot <- 1000 #1000 is usually good value for this kind of simulation
+ seed <-1234
+ # sample potential coefficinents, coefficients we could have obtained with this kind of sample
+ 
+ coefs_boot <- MASS::mvrnorm(n=n_boot, mu=coefs, Sigma = vcov) #multi variate random variable from normal distribution, not part of based R and need MASS package
+ #to check if mass is installed
+ library(MASS)
+# look at the coefs_boot
+ coefs_boot
+  
+
+ xb_boot <- coefs_boot%*%c(1, x) # we just need to change it around due to matrix multiplication
+pr_boot <- 1/ (1 + exp(-xb_boot))
+pr_boot
+ df <- data.frame(coefs_boot, xb_boot, pr_boot)
+head(df) 
+
+# now the first differences
+xb_boot_0 <- coefs_boot%*%c(1, x_0)
+xb_boot_1 <- coefs_boot%*%c(1, x_1)
+
+pr_boot_0 <- 1/ (1 + exp(-xb_boot_0))
+pr_boot_1 <- 1/ (1 + exp(-xb_boot_1))
+
+fd_boot <- pr_boot_1 - pr_boot_0
+
+mean(fd_boot)
+quantile(fd_boot, prob=c(0.025, 0.975))
+
+#check the code he uploads
+

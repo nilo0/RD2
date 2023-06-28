@@ -724,3 +724,105 @@ quantile(fd_boot, prob=c(0.025, 0.975))
 
 #check the code he uploads
 
+
+#----------------------------------------------------------------------------------
+#June 28th tutorial
+
+# to calculate the first differences we need to set the parameters to some specific value
+# and by changing the desired parameter, we obtain the first difference. But how should we 
+# choose values for the other parameters? In research approach often they choose the mean value 
+# for this parameters, to avoid choosing some extreme values for these parameters
+ 
+# "At the average" approach -----
+# compute fitted value -----
+#input values -------
+
+# age:= 50
+# others := average
+#my own code
+x_avg_0  <- c(
+  female=mean(data$female),
+  age=5,
+  list_only=mean(data$list_only),
+  voters_union=mean(data$votes_union),
+  voters_green = mean(data$votes_green)
+)
+x_avg_0 <- c(1, x_avg_0)%*%coefs
+pr_avg_0 <- 1/ (1 + exp(-x_avg_0))
+pr_avg_0
+
+# his solution
+var <- "age"
+value <- 5
+x_avg <- colMeans(data[, xvars])
+x <- replace(x_avg, list = var, values = value)
+xb <- coefs%*%c(1, x)
+pr <- 1 / (1 + exp(-xb))
+mean(pr)
+quantile(pr, prob=c(0.025, 0.957))
+
+# now calculate the first difference when the age is for ages 50 - 40
+x_avg <- colMeans(data[, xvars])
+var <- "age"
+value <- c("x_0" = 5, "x_1"=4)
+
+x_0 <- replace(x_avg, list = var, values = value['x_0'])
+x_1 <- replace(x_avg, list = var, values = value['x_1'])
+
+xb_0 <- coefs%*%c(1, x_0)
+xb_1 <- coefs%*%c(1, x_1)
+
+pr_0 <- 1 / (1 + exp(-xb_0))
+pr_1 <- 1 / (1 + exp(-xb_1))
+
+fd <- pr_1 - pr_0
+mean(fd)
+#the confidence interval would be:
+quantile(fd, prob=c(0.025, 0.957))
+
+
+# Average value approach
+# Now we don't consider the parametric bootstraps :D just the first differences
+var <- "age"
+value <- c("x_0"=5, "x_1"=4)
+
+x_obs <- data[, xvars]
+x_obs_0 <- replace(x_obs, list = var, values = value['x_0'])
+x_obs_1 <- replace(x_obs, list = var, values = value['x_1'])
+
+xb_obs_0 <- as.matrix(cbind(1, x_obs_0))%*%coefs
+xb_obs_1 <- as.matrix(cbind(1, x_obs_1))%*%coefs
+
+pr_obs_0 <- 1/ (1 + exp(- xb_obs_0))
+pr_obs_1 <- 1/ (1 + exp(- xb_obs_1))
+
+fd_obs <- pr_obs_1 - pr_obs_0
+mean(fd_obs)
+quantile(fd_obs, probs = c(0.025, 0.975))
+
+# to have the confidence interval we use parametric bootstrap which in this case is to change the coefs to 
+# bootstraps we had earlier as coefs_boot
+coefs_boot
+# Adding uncertainity estimate (CI) via parametric bootstrap
+x_avg <- colMeans(data[, xvars])
+var <- "age"
+value <- c("x_0" = 5, "x_1"=4)
+
+x_0 <- replace(x_avg, list = var, values = value['x_0'])
+x_1 <- replace(x_avg, list = var, values = value['x_1'])
+# for each draw we need to pre-allocate it
+fd <- numeric()
+for (i in seq_len(nrow(coefs_boot))) {
+  coefs_draw <- coefs_boot[i, ]
+  
+  xb_draw_0 <- as.matrix(cbind(1, x_obs_0))%*%coefs_draw
+  xb_draw_1 <- as.matrix(cbind(1, x_obs_1))%*%coefs_draw
+  
+  pr_draw_0 <- 1/ (1 + exp(- xb_draw_0))
+  pr_draw_1 <- 1/ (1 + exp(- xb_draw_1))
+  
+  fd[i] <- mean(pr_draw_1 - pr_draw_0)
+}
+
+mean(fd)
+quantile(fd, probs = c(0.025, 0.975))

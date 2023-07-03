@@ -826,3 +826,135 @@ for (i in seq_len(nrow(coefs_boot))) {
 
 mean(fd)
 quantile(fd, probs = c(0.025, 0.975))
+
+# ------------------------------------------------------------------------------
+# lecture on July 3rd
+# ML estimation of Possion y with predictor
+
+path_data <- '~/Downloads/assoc-memberships.csv'
+
+data <- read.csv(path_data)
+data
+
+# define data and variables
+
+yvar <- "assoc"
+xvars <- c(
+  "female",
+  "age",
+  "educ",
+  "inc",
+  "east",
+  "tv"
+)
+
+#log-likelihood function for possion regression
+# the effect role estimate is unkown (beta) and we want to estimate it
+ll_pos <- function(theta, y, x=NULL){
+  beta <- theta
+  if (is.null(x))
+    xb <- beta
+  else
+    xb <- cbind(1, x) %*% beta
+  lamb <- exp(xb)
+  ll <- sum(dpois(y, lambda = lamb, log = TRUE)) # the log is set to true as we dont want the probabilites, but the log-likelihood probabilities
+  return(ll) 
+}
+
+y <- data[, yvar]
+x <- as.matrix(data[, xvars])
+
+
+theta_start <- setNames(
+  rep_len(0, ncol(x) + 1),
+  nm = c("const", xvars)
+)
+
+
+# estimation ----
+
+regres <- optim(
+  fn = ll_pos,
+  par = theta_start,
+  y = y,
+  x = x,
+  control = list(fnscale = -1),
+  method = "BFGS",
+  hessian = TRUE
+)
+
+
+# post estimation ----
+
+# standard errors ----
+
+h <- regres$hessian
+vcov <- -(solve(h))
+se <- sqrt(diag(vcov))
+
+
+# Wald test statistics for H_0: k = 0 ----
+
+k <- 0
+
+coefs <- regres$par
+
+w <- (coefs - k) / se
+p_val <- pnorm(abs(w), lower.tail = FALSE) * 2
+
+
+# print result ----
+
+round(
+  data.frame(Coef = coefs, SE = se, z = w, p = p_val),
+  digits = 2
+)
+
+
+# compute first differece (at average approach)
+#input values
+
+var <- "tv"
+value <- c("x_0" = 4, "x_1" = 5)
+
+x_avg <- colMeans(data[, xvars])
+x_0 <- replace(x_avg, list = var, values = value['x_0'])
+x_1 <- replace(x_avg, list = var, values = value['x_1'])
+
+# calculate quantiles of interest with uncertainity (the confidence intervals)
+# estimates via parametric bootstrap
+
+n_boot <- 1000
+seed <- 1234
+
+# draw bootstarp samples of coefficients
+set.seed(seed)
+coefs_boot <- MASS::mvrnorm(n=n_boot, mu=coefs, sigma=vcov)
+
+# compute the first difference and 95% confidence interval
+
+xb_boot_0 <- coefs_boot%*%c(1, x_0) # we just need to change it around due to matrix multiplication
+xb_boot_1 <- coefs_boot%*%c(1, x_1)
+
+lamb_boot_0 <- exp(xb_boot_0)
+lamb_boot_1 <- exp(xb_boot_1)
+
+fd_boot <- lamb_boot_1 - lamb_boot_0
+mean(fd_boot)
+quantile(fd_boot, prob=c(0.025, 0.975))
+
+
+# =============================================================================
+#Possion property var(Y) == mean (Y)
+lamb <- 2.45
+n = 1e7
+seed <- 12345
+
+# simulate y
+set.seed(seed)
+
+y <- rpois(n, lambda = lamb)
+
+mean(y)
+var(y)
+

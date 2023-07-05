@@ -898,6 +898,7 @@ se <- sqrt(diag(vcov))
 k <- 0
 
 coefs <- regres$par
+coefs
 
 w <- (coefs - k) / se
 p_val <- pnorm(abs(w), lower.tail = FALSE) * 2
@@ -929,6 +930,7 @@ seed <- 1234
 
 # draw bootstarp samples of coefficients
 set.seed(seed)
+library(MASS)
 coefs_boot <- MASS::mvrnorm(n=n_boot, mu=coefs, sigma=vcov)
 
 # compute the first difference and 95% confidence interval
@@ -1063,25 +1065,36 @@ quantile(fd_obs, probs = c(0.025, 0.975))
 
 # to have the confidence interval we use parametric bootstrap which in this case is to change the coefs to 
 # bootstraps we had earlier as coefs_boot
-coefs_boot
+
 # Adding uncertainity estimate (CI) via parametric bootstrap
 x_avg <- colMeans(data[, xvars])
 var <- "tv"
 value <- c("x_0" = 4, "x_1"=5)
 
+
+n_boot <- 1000 #1000 is usually good value for this kind of simulation
+seed <-1234
+# sample potential coefficinents, coefficients we could have obtained with this kind of sample
+
+coefs_boot <- MASS::mvrnorm(n=n_boot, mu=coefs, Sigma = vcov) #multi variate random variable from normal distribution, not part of based R and need MASS package
+#to check if mass is installed
+library(MASS)
+# look at the coefs_boot
+coefs_boot
+
 x_0 <- replace(x_avg, list = var, values = value['x_0'])
 x_1 <- replace(x_avg, list = var, values = value['x_1'])
 # for each draw we need to pre-allocate it
 fd <- numeric()
-
+coefs_boot
 for (i in seq_len(nrow(coefs_boot))) {
   coefs_draw <- coefs_boot[i, ]
-  
+
   xb_draw_0 <- as.matrix(cbind(1, x_obs_0))%*%coefs_draw
   xb_draw_1 <- as.matrix(cbind(1, x_obs_1))%*%coefs_draw
   
   lamb_draw_0 <- exp(xb_draw_0)
-  lamb_draw_1 <- exp(- xb_draw_1)
+  lamb_draw_1 <- exp(xb_draw_1)
   
   fd[i] <- mean(lamb_draw_1 - lamb_draw_0)
 }
@@ -1103,4 +1116,7 @@ pr_avg <- colMeans(pr)
 
 # compare
 round(pr_avg, digits = 3)
-round(prop.table())
+round(prop.table(y), digits=3)
+
+
+#------------------------------------------------------------------------------------

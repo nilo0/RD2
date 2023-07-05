@@ -958,3 +958,149 @@ y <- rpois(n, lambda = lamb)
 mean(y)
 var(y)
 
+
+# -----------------------------------------------------------------------------------
+# tutorial july 5th
+
+path_data <- '~/Downloads/assoc-memberships.csv'
+
+data <- read.csv(path_data)
+data
+
+# define data and variables
+
+yvar <- "assoc"
+xvars <- c(
+  "female",
+  "age",
+  "educ",
+  "inc",
+  "east",
+  "tv"
+)
+
+#log-likelihood function for possion regression
+# the effect role estimate is unkown (beta) and we want to estimate it
+ll_pos <- function(theta, y, x=NULL){
+  beta <- theta
+  if (is.null(x))
+    xb <- beta
+  else
+    xb <- cbind(1, x) %*% beta
+  lamb <- exp(xb)
+  ll <- sum(dpois(y, lambda = lamb, log = TRUE)) # the log is set to true as we dont want the probabilites, but the log-likelihood probabilities
+  return(ll) 
+}
+
+y <- data[, yvar]
+x <- as.matrix(data[, xvars])
+
+
+theta_start <- setNames(
+  rep_len(0, ncol(x) + 1),
+  nm = c("const", xvars)
+)
+
+
+# estimation ----
+
+regres <- optim(
+  fn = ll_pos,
+  par = theta_start,
+  y = y,
+  x = x,
+  control = list(fnscale = -1),
+  method = "BFGS",
+  hessian = TRUE
+)
+
+
+# post estimation ----
+
+# standard errors ----
+
+h <- regres$hessian
+vcov <- -(solve(h))
+se <- sqrt(diag(vcov))
+
+
+# Wald test statistics for H_0: k = 0 ----
+
+k <- 0
+
+coefs <- regres$par
+
+w <- (coefs - k) / se
+p_val <- pnorm(abs(w), lower.tail = FALSE) * 2
+
+
+# print result ----
+
+round(
+  data.frame(Coef = coefs, SE = se, z = w, p = p_val),
+  digits = 2
+)
+
+
+# Average value approach
+# Now we don't consider the parametric bootstraps :D just the first differences
+var <- "tv"
+value <- c("x_0"=4, "x_1"=5)
+
+x_obs <- data[, xvars]
+x_obs_0 <- replace(x_obs, list = var, values = value['x_0'])
+x_obs_1 <- replace(x_obs, list = var, values = value['x_1'])
+
+xb_obs_0 <- as.matrix(cbind(1, x_obs_0))%*%coefs
+xb_obs_1 <- as.matrix(cbind(1, x_obs_1))%*%coefs
+
+lamb_obs_0 <- exp(xb_obs_0)
+lamb_obs_1 <- exp(xb_obs_1)
+
+fd_obs <- lamb_obs_1 - lamb_obs_0
+mean(fd_obs)
+quantile(fd_obs, probs = c(0.025, 0.975))
+
+# to have the confidence interval we use parametric bootstrap which in this case is to change the coefs to 
+# bootstraps we had earlier as coefs_boot
+coefs_boot
+# Adding uncertainity estimate (CI) via parametric bootstrap
+x_avg <- colMeans(data[, xvars])
+var <- "tv"
+value <- c("x_0" = 4, "x_1"=5)
+
+x_0 <- replace(x_avg, list = var, values = value['x_0'])
+x_1 <- replace(x_avg, list = var, values = value['x_1'])
+# for each draw we need to pre-allocate it
+fd <- numeric()
+
+for (i in seq_len(nrow(coefs_boot))) {
+  coefs_draw <- coefs_boot[i, ]
+  
+  xb_draw_0 <- as.matrix(cbind(1, x_obs_0))%*%coefs_draw
+  xb_draw_1 <- as.matrix(cbind(1, x_obs_1))%*%coefs_draw
+  
+  lamb_draw_0 <- exp(xb_draw_0)
+  lamb_draw_1 <- exp(- xb_draw_1)
+  
+  fd[i] <- mean(lamb_draw_1 - lamb_draw_0)
+}
+
+mean(fd)
+quantile(fd, probs = c(0.025, 0.975))
+
+# Assessing the possion assumption
+mean(y)
+var(y)
+
+outcome <- seq(from=min(y), to=max(y))
+outcome <- setNames(nm = outcome)
+
+x_obs <- data[, xvars]
+lamb <- exp(as.matrix(cbind(1, x_obs))) %*% coefs
+pr <- sapply(outcome, dpois, lambda=lamb)
+pr_avg <- colMeans(pr)
+
+# compare
+round(pr_avg, digits = 3)
+round(prop.table())
